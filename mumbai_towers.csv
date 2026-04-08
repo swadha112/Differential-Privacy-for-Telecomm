@@ -1,0 +1,31 @@
+tower_id,lat,lon,area_name,area_type
+TWR_001,19.076,72.8777,Churchgate,commercial
+TWR_002,19.0178,72.8478,Colaba,mixed
+TWR_003,19.033,72.841,Marine Lines,commercial
+TWR_004,19.0544,72.8405,Girgaon,residential
+TWR_005,19.0896,72.8656,Mumbai Central,transit
+TWR_006,19.0596,72.8295,Worli,commercial
+TWR_007,19.07,72.8774,BKC,commercial
+TWR_008,19.055,72.8296,Lower Parel,commercial
+TWR_009,19.1197,72.8464,Dadar,transit
+TWR_010,19.138,72.837,Mahim,residential
+TWR_011,19.0544,72.84,Bandra West,mixed
+TWR_012,19.059,72.851,Bandra East,mixed
+TWR_013,19.112,72.869,Sion,residential
+TWR_014,19.125,72.836,Kurla,residential
+TWR_015,19.1136,72.8697,Andheri West,mixed
+TWR_016,19.1197,72.8823,Andheri East,commercial
+TWR_017,19.127,72.915,Powai,commercial
+TWR_018,19.1663,72.8526,Goregaon,residential
+TWR_019,19.187,72.8466,Malad,residential
+TWR_020,19.2094,72.8417,Kandivali,residential
+TWR_021,19.2307,72.8567,Borivali,residential
+TWR_022,19.2183,72.9781,Thane,mixed
+TWR_023,19.076,72.898,Chembur,residential
+TWR_024,19.043,72.82,Nariman Point,commercial
+TWR_025,19.138,72.917,Vikhroli,commercial
+TWR_026,19.026,72.8554,Navy Nagar,residential
+TWR_027,19.1003,72.89,Ghatkopar,residential
+TWR_028,19.0728,72.8826,Wadala,residential
+TWR_029,19.0445,72.82,Haji Ali,mixed
+TWR_030,19.176,72.948,Mulund,residential
