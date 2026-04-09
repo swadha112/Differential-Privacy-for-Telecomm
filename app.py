@@ -236,7 +236,70 @@ def _tower_heatmap(tdf, title, colorscale="Blues"):
                      ticktext=[f"{h:02d}h" for h in range(0, 24, 2)])
     fig.update_yaxes(tickfont_size=9)
     return fig
+def _gamma_radius_plot(eps, sampled_r=None):
+    x_max = max(12, 8 / eps)
+    x = np.linspace(0, x_max, 500)
+    pdf = (eps ** 2) * x * np.exp(-eps * x)
 
+    expected_r = 2.0 / eps
+    mode_r = 1.0 / eps
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=x, y=pdf,
+        mode="lines",
+        line=dict(color="#2563eb", width=3),
+        name="Gamma density"
+    ))
+
+    fig.add_vline(
+        x=mode_r,
+        line_dash="dot",
+        line_color="#f59e0b",
+        annotation_text=f"Most likely radius ≈ {mode_r:.2f} km",
+        annotation_position="top left"
+    )
+
+    fig.add_vline(
+        x=expected_r,
+        line_dash="dash",
+        line_color="#dc2626",
+        annotation_text=f"Expected radius = {expected_r:.2f} km",
+        annotation_position="top right"
+    )
+
+    if sampled_r is not None:
+        sampled_y = (eps ** 2) * sampled_r * np.exp(-eps * sampled_r)
+        fig.add_trace(go.Scatter(
+            x=[sampled_r],
+            y=[sampled_y],
+            mode="markers",
+            marker=dict(size=11, color="#16a34a"),
+            name=f"Sampled r = {sampled_r:.2f} km"
+        ))
+        fig.add_vline(
+            x=sampled_r,
+            line_dash="solid",
+            line_color="#16a34a"
+        )
+
+    fig.update_layout(
+        title=f"Radius distribution from Gamma(shape=2, scale=1/ε)  |  ε = {eps}",
+        xaxis_title="Radius r (km)",
+        yaxis_title="Probability density",
+        height=360,
+        margin=dict(l=10, r=10, t=55, b=10),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0
+        )
+    )
+
+    return fig
 
 # =============================================================
 # SIDEBAR
@@ -530,30 +593,30 @@ def render_tab2(df, towers, users, uid, eps):
         fig_h.update_layout(height=300, margin=dict(l=5, r=5, t=42, b=5))
         st.plotly_chart(fig_h, use_container_width=True)
 
-    with cs:
-        st.markdown(f"""
-        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;
-                    padding:18px;margin-top:10px;">
-            <h4 style="color:#16a34a;margin:0 0 12px 0;">📐 Noise Stats</h4>
-            <table style="width:100%;font-size:0.87rem;border-collapse:collapse;">
-            <tr style="border-bottom:1px solid #e5e7eb;">
-                <td style="padding:5px 0;color:#6b7280;">ε (epsilon)</td>
-                <td style="text-align:right;font-weight:600;">{eps}</td></tr>
-            <tr style="border-bottom:1px solid #e5e7eb;">
-                <td style="padding:5px 0;color:#6b7280;">Expected radius</td>
-                <td style="text-align:right;font-weight:600;">{noise_km:.2f} km</td></tr>
-            <tr style="border-bottom:1px solid #e5e7eb;">
-                <td style="padding:5px 0;color:#6b7280;">Median noise</td>
-                <td style="text-align:right;font-weight:600;">{np.median(noise_v):.2f} km</td></tr>
-            <tr style="border-bottom:1px solid #e5e7eb;">
-                <td style="padding:5px 0;color:#6b7280;">90th percentile</td>
-                <td style="text-align:right;font-weight:600;">{np.percentile(noise_v, 90):.2f} km</td></tr>
-            <tr>
-                <td style="padding:5px 0;color:#6b7280;">Max noise</td>
-                <td style="text-align:right;font-weight:600;">{noise_v.max():.2f} km</td></tr>
-            </table>
-        </div>
-        """, unsafe_allow_html=True)
+ #   with cs:
+ #       st.markdown(f"""
+ #      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;
+ #                  padding:18px;margin-top:10px;">
+#          <h4 style="color:#16a34a;margin:0 0 12px 0;">📐 Noise Stats</h4>
+  #          <table style="width:100%;font-size:0.87rem;border-collapse:collapse;">
+  #          <tr style="border-bottom:1px solid #e5e7eb;">
+  #              <td style="padding:5px 0;color:#6b7280;">ε (epsilon)</td>
+  #              <td style="text-align:right;font-weight:600;">{eps}</td></tr>
+   #         <tr style="border-bottom:1px solid #e5e7eb;">
+   #             <td style="padding:5px 0;color:#6b7280;">Expected radius</td>
+   #             <td style="text-align:right;font-weight:600;">{noise_km:.2f} km</td></tr>
+    #        <tr style="border-bottom:1px solid #e5e7eb;">
+    #            <td style="padding:5px 0;color:#6b7280;">Median noise</td>
+    #            <td style="text-align:right;font-weight:600;">{np.median(noise_v):.2f} km</td></tr>
+     #       <tr style="border-bottom:1px solid #e5e7eb;">
+     #           <td style="padding:5px 0;color:#6b7280;">90th percentile</td>
+     #           <td style="text-align:right;font-weight:600;">{np.percentile(noise_v, 90):.2f} km</td></tr>
+     #       <tr>
+     #           <td style="padding:5px 0;color:#6b7280;">Max noise</td>
+     #           <td style="text-align:right;font-weight:600;">{noise_v.max():.2f} km</td></tr>
+     #       </table>
+     #   </div>
+     #   """, unsafe_allow_html=True)
 
 
 # =============================================================
@@ -607,20 +670,6 @@ lon' = lon + r·sin(θ) / (111·cos(lat))
 *(111 km ≈ 1 degree of latitude or longitude)*
 
 ---
-
-**Output:** Perturbed coordinate `(lat', lon')`
-
-**What ε means:**
-| ε | Avg. blur | Privacy |
-|---|-----------|---------|
-| 0.5 | ~4 km | 🟢 Very high |
-| 2.0 | ~1 km | 🔵 Balanced |
-| 5.0 | ~0.4 km | 🟡 Low |
-| 10.0 | ~0.2 km | 🔴 Minimal |
-
-**Formal guarantee:** Locations within d km of each other
-produce outputs so similar that no attacker can distinguish
-between them with probability better than e^(ε·d).
         """)
 
     # ── Uncertainty cloud visualisation ──────────────────────
@@ -671,121 +720,280 @@ between them with probability better than e^(ε·d).
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ── Live maths walkthrough ────────────────────────────────
-    st.markdown("##### Worked Example — Exact Numbers for Current ε")
-
+    # ── Interactive noise sampler ─────────────────────────────
+    st.markdown("##### Try It Yourself — Draw Noise and See the Calculation")
     st.markdown(
-        f"**Where does r come from?** It is drawn from `Gamma(shape=2, scale=1/ε)`. "
-        f"This is not an arbitrary choice — it is mathematically derived: if you integrate "
-        f"the full 2D Planar Laplace density over all angles, the distance from the "
-        f"origin follows exactly this Gamma distribution. So r is random, but constrained "
-        f"to a shape that satisfies the formal privacy proof.\n\n"
-        f"**Where does θ come from?** Purely uniform random `Uniform(0°, 360°)`. "
-        f"Every direction is equally likely — this ensures the noise has no directional "
-        f"bias, which is required for the geo-indistinguishability guarantee.\n\n"
-        f"**Do the numbers change every time?** Yes — press **Generate new draws** below "
-        f"to sample a fresh set of r and θ values and see different results. "
-        f"The step-by-step breakdown updates automatically."
+        "The Planar Laplace mechanism draws two random numbers to build the noise vector: "
+        "a **radius r** from a Gamma distribution and a **direction θ** uniformly from 0°–360°. "
+        "Use the panels below to draw each one and see the full calculation live."
     )
 
-    # Seed control — persists across rerenders, changes on button click
-    if "wt_seed" not in st.session_state:
-        st.session_state["wt_seed"] = 7
+    # ── Helper: closed-form inverse CDF for Gamma(2, 1/ε) ────
+    def gamma2_inv_cdf(p, eps_val):
+        """Binary-search inverse CDF of Gamma(shape=2, scale=1/ε).
+        Closed-form CDF: F(x) = 1 − (1 + ε·x)·exp(−ε·x)
+        """
+        lo_x, hi_x = 0.0, 100.0 / max(eps_val, 0.01)
+        for _ in range(60):
+            mid = (lo_x + hi_x) / 2.0
+            cdf_mid = 1.0 - (1.0 + eps_val * mid) * np.exp(-eps_val * mid)
+            if cdf_mid < p:
+                lo_x = mid
+            else:
+                hi_x = mid
+        return (lo_x + hi_x) / 2.0
 
-    col_btn, col_pick = st.columns([1, 3])
-    with col_btn:
-        if st.button("Generate new draws", type="primary"):
-            st.session_state["wt_seed"] = int(np.random.randint(1, 99999))
-    with col_pick:
-        manual_seed = st.number_input(
-            "Or enter a specific seed (any integer):",
-            min_value=1, max_value=99999,
-            value=st.session_state["wt_seed"],
-            step=1,
-            help="Same seed always produces the same r and θ values — useful for reproducibility."
+    # Initialise session-state keys for drawn values
+    if "tab3_r" not in st.session_state:
+        st.session_state["tab3_r"] = None
+    if "tab3_theta" not in st.session_state:
+        st.session_state["tab3_theta"] = None
+
+    # ── Row 1: Gamma PDF  +  Polar compass ───────────────────
+    g_col, p_col = st.columns(2)
+
+    # ── Gamma PDF panel ───────────────────────────────────────
+    with g_col:
+        st.markdown("**Step 1 — Draw noise radius r from Gamma(2, 1/ε)**")
+        st.caption(
+            f"With ε = {eps}, the distribution peaks at 1/ε = {1/eps:.3f} km "
+            f"and has mean 2/ε = {2/eps:.3f} km. "
+            "The shaded band is the 25th–75th percentile — half of all draws land here."
         )
-        st.session_state["wt_seed"] = int(manual_seed)
 
-    CLat, CLon = 19.0556, 72.8418
-    rng_ex = np.random.RandomState(st.session_state["wt_seed"])
-    N = 5
-    r_ex   = rng_ex.gamma(2, 1.0 / eps, size=N)
-    th_ex  = rng_ex.uniform(0, 2 * np.pi, size=N)
-    th_deg = np.degrees(th_ex)
-    dlat   = r_ex * np.cos(th_ex) / 111.0
-    dlon   = r_ex * np.sin(th_ex) / (111.0 * np.cos(np.radians(CLat)))
-    nlat   = CLat + dlat
-    nlon   = CLon + dlon
-    dist   = np.sqrt((dlat * 111.0) ** 2 + (dlon * 111.0 * np.cos(np.radians(CLat))) ** 2)
+        # Build PDF curve
+        x_max   = gamma2_inv_cdf(0.995, eps)
+        xs      = np.linspace(0, x_max, 400)
+        pdf_y   = eps**2 * xs * np.exp(-eps * xs)
 
-    st.markdown(
-        f"Real location: **Bandra, Mumbai** (19.0556° N, 72.8418° E)  ·  "
-        f"ε = **{eps}**  ·  Expected noise radius = 2/ε = **{2/eps:.3f} km**  ·  "
-        f"Seed = {st.session_state['wt_seed']}"
-    )
+        p25 = gamma2_inv_cdf(0.25, eps)
+        p75 = gamma2_inv_cdf(0.75, eps)
+        mask = (xs >= p25) & (xs <= p75)
 
-    table_df = pd.DataFrame({
-        "Draw": [f"#{i+1}" for i in range(N)],
-        "r (km)  ← Gamma(2, 1/ε)": r_ex.round(4),
-        "θ (°)  ← Uniform(0–360)": th_deg.round(2),
-        "Δlat (°)": dlat.round(6),
-        "Δlon (°)": dlon.round(6),
-        "New latitude": nlat.round(6),
-        "New longitude": nlon.round(6),
-        "Distance moved (km)": dist.round(4),
-    })
-    st.dataframe(table_df, use_container_width=True, hide_index=True)
+        fig_gam = go.Figure()
 
-    # ── Step-by-step for draw #1 ──────────────────────────────
-    r1, th1, th1d = r_ex[0], th_ex[0], th_deg[0]
-    dl1, dlo1     = dlat[0], dlon[0]
-    nl1, nlo1     = nlat[0], nlon[0]
-    d1            = dist[0]
+        # Shaded IQR band
+        fig_gam.add_trace(go.Scatter(
+            x=np.concatenate([xs[mask], xs[mask][::-1]]),
+            y=np.concatenate([pdf_y[mask], np.zeros(mask.sum())]),
+            fill="toself", fillcolor="rgba(99,102,241,0.18)",
+            line=dict(width=0), showlegend=True, name="25th–75th %ile"
+        ))
 
-    st.markdown(f"**Full step-by-step for Draw #1** (seed = {st.session_state['wt_seed']}):")
-    st.code(f"""\
-Real location :  lat = 19.055600,  lon = 72.841800
-ε             :  {eps}
+        # Main PDF curve
+        fig_gam.add_trace(go.Scatter(
+            x=xs, y=pdf_y, mode="lines",
+            line=dict(color="#6366f1", width=2.5),
+            name="Gamma(2, 1/ε) PDF"
+        ))
 
-Step 1 — Draw noise radius r from Gamma(shape=2, scale=1/ε):
-         Why Gamma(2, 1/ε)?  Derived from the 2D Planar Laplace density.
-         Integrating p_ε(z|x) = (ε²/2π)·exp(-ε·d) over all angles gives p(r) = ε²·r·exp(-ε·r),
-         which is exactly Gamma(shape=2, scale=1/ε).
+        # Peak marker (mode = 1/ε)
+        mode_y = eps**2 * (1/eps) * np.exp(-1.0)
+        fig_gam.add_trace(go.Scatter(
+            x=[1/eps], y=[mode_y], mode="markers+text",
+            marker=dict(size=10, color="#f59e0b", symbol="diamond"),
+            text=[f"Peak 1/ε={1/eps:.2f}"], textposition="top center",
+            textfont=dict(size=10), name=f"Peak (1/ε = {1/eps:.3f} km)"
+        ))
 
-         scale  = 1 / {eps} = {1/eps:.5f}
-         r      = {r1:.5f} km     ← sampled; expected = 2/ε = {2/eps:.5f} km
+        # Mean marker (2/ε)
+        mean_y = eps**2 * (2/eps) * np.exp(-2.0)
+        fig_gam.add_trace(go.Scatter(
+            x=[2/eps], y=[mean_y], mode="markers+text",
+            marker=dict(size=10, color="#10b981", symbol="circle"),
+            text=[f"Mean 2/ε={2/eps:.2f}"], textposition="top center",
+            textfont=dict(size=10), name=f"Mean (2/ε = {2/eps:.3f} km)"
+        ))
 
-Step 2 — Draw direction θ from Uniform(0°, 360°):
-         θ      = {th1d:.3f}°   ({th1:.5f} radians)
-         (all directions equally likely — no bias)
+        # Drawn-r vertical line (if available)
+        r_drawn = st.session_state["tab3_r"]
+        if r_drawn is not None:
+            r_pdf_y = eps**2 * r_drawn * np.exp(-eps * r_drawn)
+            fig_gam.add_trace(go.Scatter(
+                x=[r_drawn, r_drawn], y=[0, r_pdf_y],
+                mode="lines+markers",
+                line=dict(color="#dc2626", width=2, dash="dash"),
+                marker=dict(size=8, color="#dc2626"),
+                name=f"Your draw: r = {r_drawn:.3f} km"
+            ))
 
-Step 3 — Convert to coordinate offsets:
-         Δlat   = r · cos(θ) / 111
-                = {r1:.5f} · cos({th1d:.3f}°) / 111
-                = {r1:.5f} · ({np.cos(th1):.5f}) / 111
-                = {dl1:.6f}°
+        fig_gam.update_layout(
+            height=300, margin=dict(l=10, r=10, t=10, b=40),
+            xaxis_title="r (km)", yaxis_title="Probability density",
+            legend=dict(orientation="h", y=-0.25, x=0,
+                        font=dict(size=10)),
+            plot_bgcolor="white",
+            xaxis=dict(gridcolor="#f1f5f9"),
+            yaxis=dict(gridcolor="#f1f5f9")
+        )
+        st.plotly_chart(fig_gam, use_container_width=True)
 
-         Δlon   = r · sin(θ) / (111 · cos(lat_real))
-                = {r1:.5f} · sin({th1d:.3f}°) / (111 · cos(19.0556°))
-                = {r1:.5f} · ({np.sin(th1):.5f}) / {111.0 * np.cos(np.radians(CLat)):.5f}
-                = {dlo1:.6f}°
+        if st.button("Draw random r", type="primary", key="btn_draw_r"):
+            st.session_state["tab3_r"] = float(np.random.gamma(2, 1.0 / eps))
+            st.rerun()
 
-Step 4 — Apply shift to real coordinate:
-         New lat = 19.055600 + ({dl1:.6f}) = {nl1:.6f}°
-         New lon = 72.841800 + ({dlo1:.6f}) = {nlo1:.6f}°
+        if r_drawn is not None:
+            st.success(f"r = **{r_drawn:.4f} km**  (drawn from Gamma(2, 1/{eps}))")
+        else:
+            st.info("Press **Draw random r** to sample a noise radius.")
 
-Step 5 — Verify noise distance:
-         dist    = √((Δlat·111)² + (Δlon·111·cos(lat))²)
-                 = {d1:.5f} km
+    # ── Polar compass panel ───────────────────────────────────
+    with p_col:
+        st.markdown("**Step 2 — Draw direction θ from Uniform(0°, 360°)**")
+        st.caption(
+            "Every direction is equally likely — the ring is perfectly uniform. "
+            "This ensures noise has no directional bias (required by the privacy proof)."
+        )
 
-Result: attacker observes ({nl1:.6f}, {nlo1:.6f})
-        instead of          (19.055600, 72.841800)
-""", language="")
+        theta_drawn = st.session_state["tab3_theta"]
 
-    st.caption(
-        f"Change ε in the sidebar and regenerate — smaller ε forces larger r values "
-        f"(bigger shifts), larger ε keeps r small and the perturbed point stays close."
-    )
+        # Build uniform ring
+        angles_ring = np.linspace(0, 2 * np.pi, 361)
+        fig_pol = go.Figure()
+
+        # Uniform ring
+        fig_pol.add_trace(go.Scatterpolar(
+            r=[1.0] * 361,
+            theta=np.degrees(angles_ring).tolist(),
+            mode="lines",
+            line=dict(color="#6366f1", width=2),
+            name="Uniform ring"
+        ))
+
+        # Drawn direction arrow
+        if theta_drawn is not None:
+            theta_deg_d = float(np.degrees(theta_drawn))
+            fig_pol.add_trace(go.Scatterpolar(
+                r=[0, 1.05],
+                theta=[theta_deg_d, theta_deg_d],
+                mode="lines+markers",
+                line=dict(color="#dc2626", width=3),
+                marker=dict(size=[0, 10], color="#dc2626",
+                            symbol=["circle", "arrow-bar-up"],
+                            angleref="previous"),
+                name=f"θ = {theta_deg_d:.1f}°"
+            ))
+
+        fig_pol.update_layout(
+            height=300, margin=dict(l=10, r=10, t=10, b=40),
+            polar=dict(
+                radialaxis=dict(visible=False, range=[0, 1.2]),
+                angularaxis=dict(
+                    direction="clockwise", rotation=90,
+                    tickvals=[0, 45, 90, 135, 180, 225, 270, 315],
+                    ticktext=["N 0°", "45°", "E 90°", "135°",
+                              "S 180°", "225°", "W 270°", "315°"],
+                    gridcolor="#e2e8f0"
+                ),
+                bgcolor="white"
+            ),
+            showlegend=True,
+            legend=dict(orientation="h", y=-0.12, x=0,
+                        font=dict(size=10))
+        )
+        st.plotly_chart(fig_pol, use_container_width=True)
+
+        if st.button("Draw random θ", type="primary", key="btn_draw_theta"):
+            st.session_state["tab3_theta"] = float(np.random.uniform(0, 2 * np.pi))
+            st.rerun()
+
+        if theta_drawn is not None:
+            st.success(
+                f"θ = **{np.degrees(theta_drawn):.2f}°**  "
+                f"({theta_drawn:.4f} rad)  — drawn from Uniform(0°, 360°)"
+            )
+        else:
+            st.info("Press **Draw random θ** to sample a direction.")
+
+    # ── Row 2: Coordinate inputs + live calculation ───────────
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("**Step 3 — Enter the real location and see the full calculation**")
+
+    ci1, ci2 = st.columns(2)
+    with ci1:
+        user_lat = st.number_input(
+            "Real latitude (°N)", value=19.0556, format="%.6f",
+            help="Latitude of the true location you want to protect"
+        )
+    with ci2:
+        user_lon = st.number_input(
+            "Real longitude (°E)", value=72.8418, format="%.6f",
+            help="Longitude of the true location you want to protect"
+        )
+
+    r_val     = st.session_state["tab3_r"]
+    theta_val = st.session_state["tab3_theta"]
+
+    if r_val is not None and theta_val is not None:
+        # Compute all steps
+        cos_lat   = np.cos(np.radians(user_lat))
+        dlat_deg  = r_val * np.cos(theta_val) / 111.0
+        dlon_deg  = r_val * np.sin(theta_val) / (111.0 * cos_lat)
+        new_lat   = user_lat + dlat_deg
+        new_lon   = user_lon + dlon_deg
+        dist_km   = np.sqrt(
+            (dlat_deg * 111.0) ** 2 +
+            (dlon_deg * 111.0 * cos_lat) ** 2
+        )
+        theta_deg_v = np.degrees(theta_val)
+
+        st.markdown(
+            f"""
+            <div style="background:#f8fafc;border:1.5px solid #6366f1;border-radius:10px;
+                        padding:20px 24px;margin-top:8px;color:#1e293b;font-size:14px;
+                        line-height:1.9;">
+              <b>Full Planar Laplace Calculation</b><br><br>
+
+              <b>Inputs</b><br>
+              &nbsp;&nbsp;Real location &nbsp;= ({user_lat:.6f}° N,&nbsp; {user_lon:.6f}° E)<br>
+              &nbsp;&nbsp;ε &nbsp;= {eps}<br><br>
+
+              <b>Step 1 — Noise radius r</b><br>
+              &nbsp;&nbsp;Draw from Gamma(shape=2, scale=1/ε = 1/{eps} = {1/eps:.5f})<br>
+              &nbsp;&nbsp;<b>r = {r_val:.5f} km</b>
+              &nbsp;&nbsp;(peak at {1/eps:.3f} km · mean at {2/eps:.3f} km)<br><br>
+
+              <b>Step 2 — Direction θ</b><br>
+              &nbsp;&nbsp;Draw from Uniform(0°, 360°)<br>
+              &nbsp;&nbsp;<b>θ = {theta_deg_v:.3f}°</b> ({theta_val:.5f} rad)<br><br>
+
+              <b>Step 3 — Convert to coordinate offsets</b><br>
+              &nbsp;&nbsp;Δlat = r · cos(θ) / 111<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = {r_val:.5f} · cos({theta_deg_v:.3f}°) / 111<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = {r_val:.5f} · {np.cos(theta_val):.5f} / 111<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = <b>{dlat_deg:+.6f}°</b><br><br>
+              &nbsp;&nbsp;Δlon = r · sin(θ) / (111 · cos(lat))<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = {r_val:.5f} · sin({theta_deg_v:.3f}°) / (111 · cos({user_lat:.4f}°))<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = {r_val:.5f} · {np.sin(theta_val):.5f} / {111.0 * cos_lat:.5f}<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = <b>{dlon_deg:+.6f}°</b><br><br>
+
+              <b>Step 4 — Apply shift</b><br>
+              &nbsp;&nbsp;New lat = {user_lat:.6f} + ({dlat_deg:+.6f}) = <b>{new_lat:.6f}° N</b><br>
+              &nbsp;&nbsp;New lon = {user_lon:.6f} + ({dlon_deg:+.6f}) = <b>{new_lon:.6f}° E</b><br><br>
+
+              <b>Step 5 — Verify distance moved</b><br>
+              &nbsp;&nbsp;dist = √((Δlat·111)² + (Δlon·111·cos(lat))²)<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = <b>{dist_km:.4f} km</b><br><br>
+
+              <span style="color:#6366f1;">Attacker sees ({new_lat:.6f}, {new_lon:.6f})
+              instead of ({user_lat:.6f}, {user_lon:.6f})</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        st.caption(
+            f"Change ε in the sidebar and draw again — smaller ε forces larger r values "
+            f"(bigger shifts), larger ε keeps r small and the perturbed point stays close."
+        )
+    else:
+        missing = []
+        if r_val is None:
+            missing.append("r (noise radius)")
+        if theta_val is None:
+            missing.append("θ (direction)")
+        st.info(
+            f"Draw **{' and '.join(missing)}** above to see the full step-by-step calculation."
+        )
 
 
 # =============================================================
