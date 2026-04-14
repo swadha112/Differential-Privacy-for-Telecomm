@@ -301,6 +301,64 @@ def _gamma_radius_plot(eps, sampled_r=None):
 
     return fig
 
+
+# Helper function for point shift map
+def _point_shift_map(true_lat, true_lon, noisy_lat, noisy_lon):
+    fig = go.Figure()
+
+    fig.add_trace(go.Scattermapbox(
+        lat=[true_lat, noisy_lat],
+        lon=[true_lon, noisy_lon],
+        mode="lines",
+        line=dict(width=3, color="rgba(99,102,241,0.55)"),
+        hoverinfo="none",
+        showlegend=False,
+    ))
+
+    fig.add_trace(go.Scattermapbox(
+        lat=[true_lat],
+        lon=[true_lon],
+        mode="markers",
+        marker=dict(size=16, color="#dc2626"),
+        name="Original location",
+        hovertemplate="Original location<br>lat=%{lat:.6f}<br>lon=%{lon:.6f}<extra></extra>",
+    ))
+
+    fig.add_trace(go.Scattermapbox(
+        lat=[noisy_lat],
+        lon=[noisy_lon],
+        mode="markers",
+        marker=dict(size=16, color="#16a34a"),
+        name="Noisy location",
+        hovertemplate="Noisy location<br>lat=%{lat:.6f}<br>lon=%{lon:.6f}<extra></extra>",
+    ))
+
+    center_lat = (true_lat + noisy_lat) / 2
+    center_lon = (true_lon + noisy_lon) / 2
+    zoom = 13 if abs(true_lat - noisy_lat) < 0.03 and abs(true_lon - noisy_lon) < 0.03 else 11
+
+    fig.update_layout(
+        mapbox_style=MAPBOX_STYLE,
+        mapbox_center={"lat": center_lat, "lon": center_lon},
+        mapbox_zoom=zoom,
+        height=360,
+        margin=dict(l=0, r=0, t=0, b=0),
+        legend=dict(
+            x=0.01,
+            y=0.99,
+            bgcolor="rgba(255,255,255,0.9)",
+            bordercolor="#e5e7eb",
+            borderwidth=1,
+            font=dict(size=11),
+        ),
+        paper_bgcolor="white",
+    )
+    return fig
+
+
+# =============================================================
+# SIDEBAR
+
 # =============================================================
 # SIDEBAR
 # =============================================================
@@ -905,9 +963,12 @@ lon' = lon + r·sin(θ) / (111·cos(lat))
         else:
             st.info("Press **Draw random θ** to sample a direction.")
 
-    # ── Row 2: Coordinate inputs + live calculation ───────────
+# ── Row 2: Coordinate inputs + prettier live calculation ───────────
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("**Step 3 — Enter the real location and see the full calculation**")
+    st.markdown("##### Step 3 — Enter the real location and generate the protected point")
+    st.caption(
+        "Now we apply the sampled radius and direction to a real coordinate and compare the original and noisy point on a map."
+    )
 
     ci1, ci2 = st.columns(2)
     with ci1:
@@ -925,7 +986,6 @@ lon' = lon + r·sin(θ) / (111·cos(lat))
     theta_val = st.session_state["tab3_theta"]
 
     if r_val is not None and theta_val is not None:
-        # Compute all steps
         cos_lat   = np.cos(np.radians(user_lat))
         dlat_deg  = r_val * np.cos(theta_val) / 111.0
         dlon_deg  = r_val * np.sin(theta_val) / (111.0 * cos_lat)
@@ -937,53 +997,75 @@ lon' = lon + r·sin(θ) / (111·cos(lat))
         )
         theta_deg_v = np.degrees(theta_val)
 
-        st.markdown(
-            f"""
-            <div style="background:#f8fafc;border:1.5px solid #6366f1;border-radius:10px;
-                        padding:20px 24px;margin-top:8px;color:#1e293b;font-size:14px;
-                        line-height:1.9;">
-              <b>Full Planar Laplace Calculation</b><br><br>
+        top_left, top_right = st.columns([1.15, 1])
 
-              <b>Inputs</b><br>
-              &nbsp;&nbsp;Real location &nbsp;= ({user_lat:.6f}° N,&nbsp; {user_lon:.6f}° E)<br>
-              &nbsp;&nbsp;ε &nbsp;= {eps}<br><br>
+        with top_left:
+            st.markdown("**Original vs noisy location**")
+            st.plotly_chart(
+                _point_shift_map(user_lat, user_lon, new_lat, new_lon),
+                use_container_width=True,
+            )
+            st.caption(
+                "Red is the original point, green is the noisy point, and the line shows the displacement caused by Planar Laplace noise."
+            )
 
-              <b>Step 1 — Noise radius r</b><br>
-              &nbsp;&nbsp;Draw from Gamma(shape=2, scale=1/ε = 1/{eps} = {1/eps:.5f})<br>
-              &nbsp;&nbsp;<b>r = {r_val:.5f} km</b>
-              &nbsp;&nbsp;(peak at {1/eps:.3f} km · mean at {2/eps:.3f} km)<br><br>
+        with top_right:
+            st.markdown("**Computed values**")
+            k1, k2 = st.columns(2)
+            k1.metric("Sampled radius r", f"{r_val:.4f} km")
+            k2.metric("Direction θ", f"{theta_deg_v:.2f}°")
+            k3, k4 = st.columns(2)
+            k3.metric("Δlat", f"{dlat_deg:+.6f}°")
+            k4.metric("Δlon", f"{dlon_deg:+.6f}°")
+            k5, k6 = st.columns(2)
+            k5.metric("New latitude", f"{new_lat:.6f}°")
+            k6.metric("New longitude", f"{new_lon:.6f}°")
+            st.metric("Distance moved", f"{dist_km:.4f} km")
 
-              <b>Step 2 — Direction θ</b><br>
-              &nbsp;&nbsp;Draw from Uniform(0°, 360°)<br>
-              &nbsp;&nbsp;<b>θ = {theta_deg_v:.3f}°</b> ({theta_val:.5f} rad)<br><br>
+            st.markdown(
+                f"""
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;
+                            padding:14px 16px;margin-top:8px;color:#334155;font-size:0.92rem;line-height:1.7;">
+                    <b>Interpretation</b><br>
+                    The mechanism sampled a radius of <b>{r_val:.4f} km</b> and a direction of
+                    <b>{theta_deg_v:.2f}°</b>. Using those values, the original location was shifted to a new
+                    nearby point. This preserves approximate spatial utility while hiding the exact coordinate.
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-              <b>Step 3 — Convert to coordinate offsets</b><br>
-              &nbsp;&nbsp;Δlat = r · cos(θ) / 111<br>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = {r_val:.5f} · cos({theta_deg_v:.3f}°) / 111<br>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = {r_val:.5f} · {np.cos(theta_val):.5f} / 111<br>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = <b>{dlat_deg:+.6f}°</b><br><br>
-              &nbsp;&nbsp;Δlon = r · sin(θ) / (111 · cos(lat))<br>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = {r_val:.5f} · sin({theta_deg_v:.3f}°) / (111 · cos({user_lat:.4f}°))<br>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = {r_val:.5f} · {np.sin(theta_val):.5f} / {111.0 * cos_lat:.5f}<br>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = <b>{dlon_deg:+.6f}°</b><br><br>
+        st.markdown("**Step-by-step calculation**")
+        st.code(f"""Real coordinate:
+lat = {user_lat:.6f}
+lon = {user_lon:.6f}
 
-              <b>Step 4 — Apply shift</b><br>
-              &nbsp;&nbsp;New lat = {user_lat:.6f} + ({dlat_deg:+.6f}) = <b>{new_lat:.6f}° N</b><br>
-              &nbsp;&nbsp;New lon = {user_lon:.6f} + ({dlon_deg:+.6f}) = <b>{new_lon:.6f}° E</b><br><br>
+Chosen epsilon:
+ε = {eps:.3f}
 
-              <b>Step 5 — Verify distance moved</b><br>
-              &nbsp;&nbsp;dist = √((Δlat·111)² + (Δlon·111·cos(lat))²)<br>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = <b>{dist_km:.4f} km</b><br><br>
+Step 1 — Use the sampled radius and direction
+r = {r_val:.6f} km
+θ = {theta_deg_v:.3f}° = {theta_val:.6f} radians
 
-              <span style="color:#6366f1;">Attacker sees ({new_lat:.6f}, {new_lon:.6f})
-              instead of ({user_lat:.6f}, {user_lon:.6f})</span>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+Step 2 — Convert radius + direction into coordinate shifts
+Δlat = r * cos(θ) / 111
+     = {r_val:.6f} * cos({theta_deg_v:.3f}°) / 111
+     = {dlat_deg:.8f}°
+
+Δlon = r * sin(θ) / (111 * cos(lat))
+     = {r_val:.6f} * sin({theta_deg_v:.3f}°) / (111 * cos({user_lat:.6f}°))
+     = {dlon_deg:.8f}°
+
+Step 3 — Add shifts to the original point
+new lat = {user_lat:.6f} + ({dlat_deg:+.8f}) = {new_lat:.6f}
+new lon = {user_lon:.6f} + ({dlon_deg:+.8f}) = {new_lon:.6f}
+
+Step 4 — Verify total moved distance
+distance moved = {dist_km:.6f} km
+""", language="")
+
         st.caption(
-            f"Change ε in the sidebar and draw again — smaller ε forces larger r values "
-            f"(bigger shifts), larger ε keeps r small and the perturbed point stays close."
+            f"Change ε in the sidebar and draw again — smaller ε produces larger expected shifts, while larger ε keeps the noisy point closer to the original one."
         )
     else:
         missing = []
@@ -992,8 +1074,12 @@ lon' = lon + r·sin(θ) / (111·cos(lat))
         if theta_val is None:
             missing.append("θ (direction)")
         st.info(
-            f"Draw **{' and '.join(missing)}** above to see the full step-by-step calculation."
+            f"Draw **{' and '.join(missing)}** above to generate the map view and full calculation."
         )
+
+# =============================================================
+# TAB 4 — CITY-WIDE ANALYSIS
+# =============================================================
 
 
 # =============================================================
