@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Secret Map</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Georgia', serif;
+      color: #eef4ff;
+      background: #060e1e;
+      min-height: 100vh;
+    }
+
+    /* ── screens ──────────────────────────────── */
+    .screen {
+      display: none;
+      min-height: 100vh;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 20px;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    .screen.active { display: flex; }
+    .screen.show   { opacity: 1; }
+
+    /* ── shared ───────────────────────────────── */
+    .badge {
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 11px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: #5a7aaa;
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: clamp(30px, 5.5vw, 58px);
+      font-weight: normal;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin-bottom: 18px;
+    }
+    .gold {
+      background: linear-gradient(90deg, #ffd76a, #ffb74d);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    p.body {
+      max-width: 500px;
+      font-size: clamp(15px, 2vw, 18px);
+      line-height: 1.75;
+      color: #a8bfe0;
+      margin-bottom: 22px;
+    }
+    p.body strong { color: #eef4ff; }
+    p.body em     { color: #ffd76a; font-style: normal; }
+
+    .btn {
+      padding: 15px 36px;
+      font-size: 15px;
+      font-family: 'Inter', Arial, sans-serif;
+      color: #fff;
+      background: linear-gradient(90deg, #4f88ff, #6b79ff);
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(79,136,255,0.4); }
+    .btn.ghost {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+    .btn.ghost:hover { box-shadow: none; }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+    /* ── screen 1 ─────────────────────────────── */
+    .budget-card {
+      background: rgba(67,227,140,0.07);
+      border: 1px solid rgba(67,227,140,0.22);
+      border-radius: 20px;
+      padding: 22px 52px;
+      margin: 16px 0 28px;
+    }
+    .budget-card .lbl {
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #4aaa78;
+      margin-bottom: 8px;
+    }
+    .budget-card .num {
+      font-size: 62px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      color: #43e38c;
+      line-height: 1;
+    }
+
+    /* ── screen 2 ─────────────────────────────── */
+    .style-cards {
+      display: flex;
+      gap: 12px;
+      margin: 14px 0 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .style-card {
+      background: rgba(255,255,255,0.03);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 15px;
+      padding: 16px 20px;
+      width: 152px;
+      transition: border-color 0.25s, background 0.25s;
+    }
+    .style-card.on {
+      border-color: rgba(79,136,255,0.5);
+      background: rgba(79,136,255,0.07);
+    }
+    .style-card .ico { font-size: 32px; margin-bottom: 8px; }
+    .style-card .nm {
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 4px;
+    }
+    .style-card .ds {
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 11px;
+      color: #6a88ba;
+      line-height: 1.4;
+    }
+
+    .slider-wrap {
+      width: 100%;
+      max-width: 440px;
+      margin: 0 auto 12px;
+    }
+    .slider-ends {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 11px;
+      color: #5a7aaa;
+      margin-bottom: 8px;
+    }
+    input[type=range].eps-slider {
+      width: 100%;
+      appearance: none;
+      height: 11px;
+      border-radius: 999px;
+      outline: none;
+      background: linear-gradient(90deg, rgba(67,227,140,0.85), rgba(255,183,77,0.85), rgba(255,111,127,0.85));
+      cursor: pointer;
+    }
+    input[type=range].eps-slider::-webkit-slider-thumb {
+      appearance: none;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid #7db6ff;
+      box-shadow: 0 0 0 5px rgba(125,182,255,0.18);
+    }
+    input[type=range].eps-slider::-moz-range-thumb {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid #7db6ff;
+    }
+
+    .cost-box {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 14px 28px;
+      margin: 4px 0 24px;
+      display: inline-flex;
+      flex-direction: column;
+      gap: 8px;
+      font-family: 'Inter', Arial, sans-serif;
+    }
+    .cost-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 30px;
+      font-size: 13px;
+      color: #7a95c4;
+    }
+    .cost-row strong { color: #eef4ff; }
+
+    /* ── screen 3: map ────────────────────────── */
+    #s3 {
+      padding: 18px 18px;
+      justify-content: flex-start;
+      align-items: stretch;
+      text-align: left;
+    }
+
+    .map-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1020px;
+      margin: 0 auto 10px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .map-top .badge { margin-bottom: 0; }
+    .map-top .hint {
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 13px;
+      color: #5a7aaa;
+    }
+    .map-top .hint strong { color: #eef4ff; }
+
+    .map-layout {
+      display: grid;
+      grid-template-columns: 1fr 245px;
+      gap: 14px;
+      max-width: 1020px;
+      margin: 0 auto;
+      flex: 1;
+      width: 100%;
+    }
+
+    .map-left { display: flex; flex-direction: column; }
+
+    .speech {
+      background: rgba(255,214,106,0.05);
+      border: 1px solid rgba(255,214,106,0.14);
+      border-radius: 11px;
+      padding: 11px 16px;
+      font-size: 14px;
+      font-style: italic;
+      color: #ffedb8;
+      line-height: 1.5;
+      margin-bottom: 10px;
+      min-height: 50px;
+      transition: opacity 0.3s ease;
+    }
+
+    .map-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 8px;
+      flex: 1;
+      min-height: 420px;
+    }
+
+    /* tiles */
+    .tile {
+      background: rgba(10,20,44,0.97);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.17s, border-color 0.2s, background 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tile:hover:not(.revealed):not(.off):not(.guess-lock) {
+      transform: scale(1.05);
+      border-color: rgba(125,182,255,0.3);
+    }
+    .tile.off { cursor: not-allowed; opacity: 0.38; }
+    .tile.revealed { cursor: default; border-color: rgba(255,214,106,0.18); }
+
+    /* guess mode overrides */
+    .tile.g-active { cursor: pointer !important; opacity: 1 !important; }
+    .tile.g-active:hover {
+      transform: scale(1.05) !important;
+      border-color: rgba(255,214,106,0.55) !important;
+    }
+    .tile.g-correct {
+      border-color: #43e38c !important;
+      background: rgba(67,227,140,0.1) !important;
+      animation: pop 0.4s ease;
+    }
+    .tile.g-wrong {
+      border-color: #ff6f7f !important;
+      background: rgba(255,111,127,0.08) !important;
+    }
+    .tile.g-treasure {
+      border-color: #ffd76a !important;
+      background: rgba(255,214,106,0.1) !important;
+      animation: pop 0.5s ease 0.2s;
+    }
+
+    @keyframes pop {
+      0%   { transform: scale(1); }
+      45%  { transform: scale(1.14); }
+      100% { transform: scale(1); }
+    }
+
+    .fog {
+      position: absolute; inset: 0;
+      background: linear-gradient(140deg, rgba(16,32,68,0.97), rgba(8,16,36,0.99));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; color: rgba(255,255,255,0.14);
+      transition: opacity 0.4s ease;
+    }
+    .tile.revealed .fog { opacity: 0; pointer-events: none; }
+
+    .content {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      opacity: 0;
+      transition: opacity 0.4s ease 0.1s, filter 0.4s ease;
+    }
+    .tile.revealed .content { opacity: 1; }
+
+    /* sidebar */
+    .map-right { display: flex; flex-direction: column; gap: 12px; }
+
+    .side-card {
+      background: rgba(10,20,44,0.96);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 15px;
+      padding: 15px;
+    }
+    .slbl {
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #5a7aaa;
+      margin-bottom: 8px;
+    }
+    .eng-num {
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      margin-bottom: 10px;
+      transition: color 0.5s;
+    }
+    .bar {
+      height: 9px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: inherit;
+      transition: width 0.5s ease, background 0.5s;
+    }
+    .sstat {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 13px;
+      color: #7a95c4;
+      margin-top: 8px;
+    }
+    .sstat strong { color: #eef4ff; }
+
+    .tip {
+      border-radius: 13px;
+      padding: 13px 15px;
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.55;
+      background: rgba(255,214,106,0.04);
+      border: 1px solid rgba(255,214,106,0.1);
+      color: #c8a85a;
+    }
+
+    /* ── screen 4: result ─────────────────────── */
+    .result-icon { font-size: 60px; margin-bottom: 14px; }
+
+    .mini-explain {
+      max-width: 480px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 20px 26px;
+      text-align: left;
+      margin: 18px 0 26px;
+    }
+    .mini-explain p {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #a8bfe0;
+      margin-bottom: 10px;
+    }
+    .mini-explain p:last-child { margin-bottom: 0; }
+    .mini-explain strong { color: #ffd76a; }
+    .mini-explain .tech  { color: #77adff; font-family: 'Inter', Arial, sans-serif; }
+
+    /* ── pearson legend ───────────────────────── */
+    .pearson-box {
+      max-width: 480px;
+      border: 1px solid rgba(119,173,255,0.2);
+      border-radius: 16px;
+      padding: 20px 26px;
+      margin: 0 0 26px;
+      text-align: left;
+      background: rgba(119,173,255,0.04);
+    }
+    .pearson-box h3 {
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #77adff;
+      margin-bottom: 14px;
+    }
+    .pearson-formula {
+      font-family: 'Georgia', serif;
+      font-size: 14px;
+      color: #c8d8f8;
+      text-align: center;
+      margin-bottom: 16px;
+      padding: 10px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 8px;
+      letter-spacing: 0.02em;
+      line-height: 1.6;
+    }
+    .var-list {
+      display: grid;
+      gap: 10px;
+    }
+    .var-row {
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 13px;
+    }
+    .var-name {
+      font-family: 'Georgia', serif;
+      font-size: 15px;
+      color: #77adff;
+      min-width: 48px;
+      font-style: italic;
+      flex-shrink: 0;
+    }
+    .var-def { color: #a8bfe0; line-height: 1.45; }
+    .var-def strong { color: #eef4ff; }
+
+    /* ── responsive ───────────────────────────── */
+    @media (max-width: 800px) {
+      .map-layout { grid-template-columns: 1fr; }
+      .map-right   { flex-direction: row; flex-wrap: wrap; }
+      .side-card   { flex: 1; min-width: 135px; }
+    }
+    @media (max-width: 500px) {
+      .style-cards .style-card { width: 130px; }
+      .map-grid { gap: 6px; min-height: 340px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     SCREEN 1  —  You have a budget
+═══════════════════════════════════════ -->
+<div id="s1" class="screen active">
+  <div class="badge">The Secret Map</div>
+
+  <h1>You are a <span class="gold">Treasure Hunter</span>.</h1>
+
+  <p class="body">
+    Under the fog lies a hidden map. One tile secretly holds the <strong>💎 treasure</strong>.
+    <br><br>
+    To peek at a tile, you spend <em>ε (epsilon)</em> — your <strong>Privacy Budget</strong>.
+    When the budget hits zero, the fog never lifts again.
+  </p>
+
+  <div class="budget-card">
+    <div class="lbl">Your Privacy Budget</div>
+    <div class="num">2.0 ε</div>
+  </div>
+
+  <button class="btn" id="btn1">Got it — let's begin →</button>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     SCREEN 2  —  Choose ε
+═══════════════════════════════════════ -->
+<div id="s2" class="screen">
+  <div class="badge">Set Your ε</div>
+
+  <h1>How sharp are your <span class="gold">peeks</span>?</h1>
+
+  <p class="body">
+    <strong>High ε</strong> — tiles look crystal clear, but each peek costs more budget.<br>
+    <strong>Low ε</strong> — tiles look blurry, but your budget lasts much longer.
+  </p>
+
+  <div class="style-cards">
+    <div class="style-card" id="cFog">
+      <div class="ico">🌫️</div>
+      <div class="nm">Low ε</div>
+      <div class="ds">Blurry tiles. Cheap. More peeks.</div>
+    </div>
+    <div class="style-card on" id="cBal">
+      <div class="ico">🔭</div>
+      <div class="nm">Mid ε</div>
+      <div class="ds">Decent view. Balanced cost.</div>
+    </div>
+    <div class="style-card" id="cClr">
+      <div class="ico">🔍</div>
+      <div class="nm">High ε</div>
+      <div class="ds">Crystal clear. Expensive. Fewer peeks.</div>
+    </div>
+  </div>
+
+  <div class="slider-wrap">
+    <div class="slider-ends">
+      <span>Low ε — blurry, cheap</span>
+      <span>High ε — clear, costly</span>
+    </div>
+    <input type="range" class="eps-slider" id="slider" min="1" max="10" value="5" />
+  </div>
+
+  <div class="cost-box">
+    <div class="cost-row"><span>ε spent per peek</span><strong id="costEach">—</strong></div>
+    <div class="cost-row"><span>Budget lasts ~</span><strong id="countApprox">— peeks</strong></div>
+    <div class="cost-row"><span>Tiles will look</span><strong id="styleWord">—</strong></div>
+  </div>
+
+  <button class="btn" id="btn2">Start the hunt →</button>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     SCREEN 3  —  The Map  (peek → guess)
+═══════════════════════════════════════ -->
+<div id="s3" class="screen">
+
+  <div class="map-top">
+    <div class="badge" style="margin-bottom:0;">The Hunt</div>
+    <div class="hint">ε per peek: <strong id="hintCost">—</strong> · Click a tile to peek!</div>
+  </div>
+
+  <div class="map-layout">
+
+    <div class="map-left">
+      <div class="speech" id="speech">
+        "The map lies before you. One tile hides the 💎 treasure. Spend your ε wisely!"
+      </div>
+      <div class="map-grid" id="mapGrid"></div>
+    </div>
+
+    <div class="map-right">
+      <div class="side-card">
+        <div class="slbl">Privacy Budget (ε) Left</div>
+        <div class="eng-num" id="engNum">2.00 ε</div>
+        <div class="bar">
+          <div class="bar-fill" id="barFill" style="width:100%;background:linear-gradient(90deg,#43e38c,#7ef0c0);"></div>
+        </div>
+      </div>
+
+      <div class="side-card">
+        <div class="slbl">Stats</div>
+        <div class="sstat"><span>Tiles peeked</span><strong id="stPeeked">0 / 20</strong></div>
+        <div class="sstat"><span>ε used</span><strong id="stUsed">0.00 ε</strong></div>
+        <div class="sstat"><span>Peek style</span><strong id="stStyle">—</strong></div>
+      </div>
+
+      <div class="tip" id="tip">Peek tiles to find the 💎 before your ε runs out!</div>
+
+      <button class="btn" id="btnGuessNow" style="width:100%;margin-top:0;background:linear-gradient(90deg,#ffb74d,#ff8a65);font-size:14px;padding:13px 16px;">
+        💎 I found it — make my guess!
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     SCREEN 4  —  Result
+═══════════════════════════════════════ -->
+<div id="s4" class="screen">
+  <div class="result-icon" id="resIcon">—</div>
+
+  <h1 id="resTitle">—</h1>
+
+  <p class="body" id="resBody" style="margin-bottom:6px;">—</p>
+
+  <div class="mini-explain">
+    <p>
+      The <strong>ε (epsilon)</strong> you chose controlled two things at once:
+      how <em>clearly</em> you could see each tile, and how fast your
+      <strong>Privacy Budget</strong> drained.
+    </p>
+    <p>
+      In real life, every time a system answers a question about private data
+      it spends some ε. When the budget is gone, it stops — to protect people's secrets.
+      <span class="tech">That's differential privacy.</span>
+    </p>
+  </div>
+
+  <div class="pearson-box">
+    <h3>Pearson Correlation — what the variables mean</h3>
+    <div class="pearson-formula">
+      r &nbsp;=&nbsp;
+      Σ (raw<sub>i</sub> − raw̄)(dp<sub>i</sub> − dp̄)
+      &nbsp;/&nbsp;
+      √[ Σ(raw<sub>i</sub> − raw̄)² · Σ(dp<sub>i</sub> − dp̄)² ]
+    </div>
+    <div class="var-list">
+      <div class="var-row">
+        <span class="var-name">raw<sub>i</sub></span>
+        <span class="var-def">The <strong>real, original value</strong> for person <em>i</em> — the actual data before any privacy noise is added. Think of it as the true answer.</span>
+      </div>
+      <div class="var-row">
+        <span class="var-name">raw̄</span>
+        <span class="var-def">The <strong>average of all real values</strong> — add up every raw<sub>i</sub> and divide by the count. It's the "center" of the original data.</span>
+      </div>
+      <div class="var-row">
+        <span class="var-name">dp<sub>i</sub></span>
+        <span class="var-def">The <strong>noisy (private) version</strong> of person <em>i</em>'s value — the original value with random noise added by the DP mechanism to protect privacy.</span>
+      </div>
+      <div class="var-row">
+        <span class="var-name">dp̄</span>
+        <span class="var-def">The <strong>average of all noisy values</strong> — same idea as raw̄ but calculated on the DP data. High ε → dp̄ stays close to raw̄. Low ε → dp̄ drifts further away.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn ghost" id="btnChange">Change ε and try again</button>
+    <button class="btn"       id="btnRetry">Same ε, new map →</button>
+  </div>
+</div>
+
+
+<script>
+  /* ── constants ────────────────────────── */
+  const MAX_BUDGET    = 2.0;
+  const BASE_COST     = 0.10;
+  const ROWS = 4, COLS = 5;
+  const TREASURE_ICON = '💎';
+  const ICONS = [
+    '🗺️','⛰️','🌊','🌲','🏔️','🏕️','🦅','⭐','🌙','🔥',
+    '🗿','🌺','🦋','🌈','🏴‍☠️','⚓','🐉','🌟','✨','🌀'
+  ];
+
+  /* ── state ────────────────────────────── */
+  let budget      = MAX_BUDGET;
+  let sliderVal   = 5;
+  let peeked      = 0;
+  let treasureIdx = -1;
+  let guessMode   = false;
+  let firstClick  = true;
+
+  /* ── helpers ──────────────────────────── */
+  const toEps    = v   => +(0.10 + (v - 1) * (1.40 / 9)).toFixed(2);
+  const tileCost = eps => +(BASE_COST * (0.7 + eps * 0.9)).toFixed(2);
+  const tileBlur = eps => Math.max(0, Math.round(14 - eps * 11));
+  const styleLbl = eps =>
+    eps <= 0.4  ? '🌫️ Blurry (Low ε)'  :
+    eps <= 0.95 ? '🔭 Balanced (Mid ε)' :
+                  '🔍 Clear (High ε)';
+
+  /* ── screen transitions ───────────────── */
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active','show'));
+    const el = document.getElementById(id);
+    el.classList.add('active');
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ── screen 2 slider ──────────────────── */
+  const slider = document.getElementById('slider');
+
+  function refreshSlider() {
+    sliderVal = parseInt(slider.value);
+    const eps   = toEps(sliderVal);
+    const cost  = tileCost(eps);
+    const count = Math.floor(MAX_BUDGET / cost);
+
+    document.getElementById('costEach').textContent   = `${cost.toFixed(2)} ε`;
+    document.getElementById('countApprox').textContent = `~${count} peeks`;
+    document.getElementById('styleWord').textContent   = styleLbl(eps);
+
+    document.getElementById('cFog').classList.toggle('on', eps <= 0.4);
+    document.getElementById('cBal').classList.toggle('on', eps > 0.4 && eps <= 0.95);
+    document.getElementById('cClr').classList.toggle('on', eps > 0.95);
+  }
+
+  slider.addEventListener('input', refreshSlider);
+  refreshSlider();
+
+  /* ── refs ─────────────────────────────── */
+  const mapGrid  = document.getElementById('mapGrid');
+  const speechEl = document.getElementById('speech');
+  const engNum   = document.getElementById('engNum');
+  const barFill  = document.getElementById('barFill');
+  const stPeeked = document.getElementById('stPeeked');
+  const stUsed   = document.getElementById('stUsed');
+  const stStyle  = document.getElementById('stStyle');
+  const hintCost    = document.getElementById('hintCost');
+  const tipEl       = document.getElementById('tip');
+  const btnGuessNow = document.getElementById('btnGuessNow');
+
+  /* ── build map ────────────────────────── */
+  function buildMap() {
+    mapGrid.innerHTML = '';
+    budget      = MAX_BUDGET;
+    peeked      = 0;
+    guessMode   = false;
+    firstClick  = true;
+    treasureIdx = Math.floor(Math.random() * ROWS * COLS);
+
+    const eps  = toEps(sliderVal);
+    const cost = tileCost(eps);
+    const blur = tileBlur(eps);
+
+    hintCost.textContent = `${cost.toFixed(2)} ε`;
+    stStyle.textContent  = styleLbl(eps);
+
+    const pool = [...ICONS].sort(() => Math.random() - 0.5);
+
+    for (let i = 0; i < ROWS * COLS; i++) {
+      const icon = (i === treasureIdx) ? TREASURE_ICON : pool[i % pool.length];
+      const tile = document.createElement('div');
+      tile.className   = 'tile';
+      tile.dataset.idx = i;
+      tile.innerHTML   = `
+        <div class="fog">❓</div>
+        <div class="content" style="filter:blur(${blur}px)">${icon}</div>
+      `;
+      tile.addEventListener('click', () => onTileClick(tile));
+      mapGrid.appendChild(tile);
+    }
+
+    refreshSidebar();
+    refreshDisabled(cost);
+    setSpeech('"The map lies before you. One tile hides the 💎. Spend your ε wisely!"');
+    tipEl.textContent = 'Peek tiles to find the 💎 before your ε runs out!';
+    btnGuessNow.style.display = 'block';
+  }
+
+  /* ── tile click (peek or guess) ───────── */
+  function onTileClick(tile) {
+    if (guessMode) { doGuess(tile); return; }
+    if (tile.classList.contains('revealed') || tile.classList.contains('off')) return;
+
+    const eps  = toEps(sliderVal);
+    const cost = tileCost(eps);
+    if (cost > budget) return;
+
+    tile.classList.add('revealed');
+    budget  = Math.max(0, +(budget - cost).toFixed(2));
+    peeked++;
+
+    refreshSidebar();
+    refreshDisabled(cost);
+    updateSpeech(eps, cost, tile);
+
+    if (budget <= 0 || peeked === ROWS * COLS) {
+      setTimeout(() => startGuess(false), 1100);
+    }
+  }
+
+  /* ── guess mode ───────────────────────── */
+  function startGuess(voluntary = false) {
+    guessMode = true;
+    btnGuessNow.style.display = 'none';
+
+    const allDone = peeked === ROWS * COLS;
+    setSpeech(voluntary
+      ? '"Confident! Now click the tile you think hides the 💎 treasure."'
+      : allDone
+        ? '"You peeked everything! Now — click the tile where you saw the 💎 treasure."'
+        : '"ε budget gone! Time to guess — where is the 💎 treasure? Click any tile."');
+    tipEl.textContent = '👆 Click the tile you think hides the 💎 treasure!';
+
+    document.querySelectorAll('.tile').forEach(t => {
+      t.classList.remove('off');
+      t.classList.add('g-active');
+      t.style.cursor = 'pointer';
+    });
+  }
+
+  function doGuess(tile) {
+    // lock all tiles
+    document.querySelectorAll('.tile').forEach(t => {
+      t.classList.remove('g-active');
+      t.style.pointerEvents = 'none';
+    });
+
+    const correct = parseInt(tile.dataset.idx) === treasureIdx;
+
+    if (correct) {
+      // remove blur and mark correct
+      tile.querySelector('.content').style.filter = 'none';
+      tile.classList.add('revealed', 'g-correct');
+      setTimeout(() => showResult(true), 700);
+    } else {
+      // mark wrong, then reveal the real treasure
+      tile.classList.add('g-wrong');
+
+      const realTile = mapGrid.children[treasureIdx];
+      setTimeout(() => {
+        realTile.querySelector('.content').style.filter = 'none';
+        realTile.classList.add('revealed', 'g-treasure');
+      }, 450);
+
+      setTimeout(() => showResult(false), 1100);
+    }
+  }
+
+  /* ── result screen ────────────────────── */
+  function showResult(correct) {
+    const eps   = toEps(sliderVal);
+    const used  = (MAX_BUDGET - budget).toFixed(2);
+    const style = styleLbl(eps);
+
+    document.getElementById('resIcon').textContent = correct ? '💎' : '❌';
+
+    document.getElementById('resTitle').innerHTML = correct
+      ? 'You found the <span class="gold">treasure</span>!'
+      : 'The treasure stayed <span class="gold">hidden</span>.';
+
+    document.getElementById('resBody').textContent = correct
+      ? `${style} — ${peeked} peek${peeked !== 1 ? 's' : ''}, ${used} ε spent. You spotted the 💎!`
+      : `${style} — ${peeked} peek${peeked !== 1 ? 's' : ''}, ${used} ε spent. The 💎 tile was just revealed above.`;
+
+    show('s4');
+  }
+
+  /* ── sidebar & helpers ────────────────── */
+  function refreshSidebar() {
+    const pct  = Math.max((budget / MAX_BUDGET) * 100, 0);
+    const used = (MAX_BUDGET - budget).toFixed(2);
+
+    engNum.textContent  = `${budget.toFixed(2)} ε`;
+    barFill.style.width = pct + '%';
+    stPeeked.textContent = `${peeked} / ${ROWS * COLS}`;
+    stUsed.textContent   = `${used} ε`;
+
+    if (pct > 55) {
+      engNum.style.color    = '#43e38c';
+      barFill.style.background = 'linear-gradient(90deg,#43e38c,#7ef0c0)';
+    } else if (pct > 20) {
+      engNum.style.color    = '#ffb74d';
+      barFill.style.background = 'linear-gradient(90deg,#ffb74d,#ffd76a)';
+    } else {
+      engNum.style.color    = '#ff6f7f';
+      barFill.style.background = 'linear-gradient(90deg,#ff6f7f,#ffb3be)';
+    }
+  }
+
+  function refreshDisabled(cost) {
+    document.querySelectorAll('.tile:not(.revealed)').forEach(t => {
+      t.classList.toggle('off', cost > budget);
+    });
+  }
+
+  function setSpeech(text) {
+    speechEl.style.opacity = '0';
+    setTimeout(() => { speechEl.textContent = text; speechEl.style.opacity = '1'; }, 290);
+  }
+
+  function updateSpeech(eps, cost, tile) {
+    const pct        = budget / MAX_BUDGET;
+    const isTreasure = parseInt(tile.dataset.idx) === treasureIdx;
+
+    if (firstClick) {
+      firstClick = false;
+      if (isTreasure) {
+        setSpeech(eps > 0.95
+          ? '"💎 You can see it clearly — that\'s the treasure tile! Remember where it is."'
+          : '"Something is there… but it\'s blurry. Could that be the 💎? Hard to tell with low ε."');
+      } else {
+        setSpeech(`"First peek! Spent ${cost.toFixed(2)} ε. Keep searching — the 💎 is out there."`);
+      }
+      return;
+    }
+
+    if (isTreasure && !guessMode) {
+      setSpeech(eps > 0.95
+        ? '"💎 That\'s the treasure tile — you can clearly see it!"'
+        : '"Something blurry there… might be the 💎, might not. Low ε makes it hard to be sure."');
+      return;
+    }
+
+    if (pct <= 0.15) {
+      setSpeech(`"⚠️ Only ${budget.toFixed(2)} ε left — almost out!"`);
+      tipEl.textContent = '⚠️ Nearly empty! Pick your last tiles carefully.';
+    } else if (pct <= 0.35) {
+      setSpeech(`"${budget.toFixed(2)} ε left. Choose wisely."`);
+    } else if (peeked === 10) {
+      setSpeech('"Halfway through — still hunting for the 💎?"');
+    }
+  }
+
+  /* ── buttons ──────────────────────────── */
+  document.getElementById('btn1').addEventListener('click', () => show('s2'));
+  document.getElementById('btn2').addEventListener('click', () => { buildMap(); show('s3'); });
+  document.getElementById('btnRetry').addEventListener('click', () => { buildMap(); show('s3'); });
+  document.getElementById('btnChange').addEventListener('click', () => show('s2'));
+  btnGuessNow.addEventListener('click', () => startGuess(true));
+
+  show('s1');
+</script>
+</body>
+</html>

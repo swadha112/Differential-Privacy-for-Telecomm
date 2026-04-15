@@ -1193,6 +1193,15 @@ r  =  ────────────────────────�
       √[Σ(rawᵢ − raw̄)²] · √[Σ(dpᵢ − dp̄)²]
 ```
 
+**What each variable means:**
+
+| Variable | Meaning |
+|----------|---------|
+| **rawᵢ** | The actual (original) event count for cell *i* — e.g. how many calls happened at a given tower in a given hour, before any noise is added |
+| **raw̄** | The mean of *all* raw counts — the average across every (area, hour) cell in the original data |
+| **dpᵢ** | The differentially private (noisy) count for cell *i* — the same cell's value after Laplace noise has been injected to protect privacy |
+| **dp̄** | The mean of *all* DP counts — the average across every (area, hour) cell in the noisy data. With high ε, dp̄ stays close to raw̄; with low ε, it can drift |
+
 Intuitively: if a tower was busy in the raw data, is it still relatively busy in the DP data?
 A high r means yes — the operator can still route traffic, detect congestion, and plan
 capacity using the DP-protected heatmap. Individual subscriber movements are hidden,
